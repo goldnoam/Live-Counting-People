@@ -3,33 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Title is dynamically set by JavaScript on load -->
     <title>Real-Time Person Counter</title>
+    
+    <!-- 1. Google AdSense Code -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-0274741291001288"
+      crossorigin="anonymous"></script>
+      
+    <!-- 2. Google Analytics Code -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-7MZNSFHSD7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-7MZNSFHSD7');
+    </script>
+    
     <!-- Load Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load Inter Font -->
+    
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s; }
+        .dark body { background-color: #1a202c; }
+        .dark #app-container { background-color: #2d3748; color: #e2e8f0; }
+        .dark .border-b { border-color: #4a5568; }
+        .dark .bg-gray-50 { background-color: #4a5568; border-color: #718096; }
+        .dark .text-gray-900 { color: #e2e8f0; }
+        .dark .text-gray-700 { color: #a0aec0; }
+        .dark .text-gray-800 { color: #e2e8f0; }
+        .dark .border-gray-300 { border-color: #4a5568; }
+
+        /* Modal styling */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.3s;
+        }
     </style>
-    <!-- Removed: TensorFlow.js and Coco-SSD scripts were moved to the end of the body -->
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
 
-    <div id="app-container" class="w-full max-w-2xl bg-white shadow-2xl rounded-xl p-6 space-y-6">
+    <div id="app-container" class="w-full max-w-2xl bg-white shadow-2xl rounded-xl p-6 space-y-6 transition-colors duration-300">
 
-        <h1 class="text-3xl font-extrabold text-gray-900 text-center border-b pb-3 mb-4">
+        <h1 id="mainHeading" class="text-3xl font-extrabold text-gray-900 text-center border-b pb-3 mb-4 flex justify-between items-center">
             Live Person Monitoring
+            <!-- Settings Button -->
+            <button id="settingsBtn" class="text-gray-500 hover:text-indigo-600 transition duration-150 p-2 rounded-full focus:outline-none">
+                <!-- Gear Icon SVG (Lucide-react equivalent) -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6">
+                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.09a2 2 0 0 0-2.73.73l-.23.46a2 2 0 0 0 .73 2.73l.15.15a2 2 0 0 1 0 2.73l-.15.15a2 2 0 0 0-.73 2.73l.23.46a2 2 0 0 0 2.73.73l.15-.09a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.09a2 2 0 0 0 2.73-.73l.23-.46a2 2 0 0 0-.73-2.73l-.15-.15a2 2 0 0 1 0-2.73l.15-.15a2 2 0 0 0 .73-2.73l-.23-.46a2 2 0 0 0-2.73-.73l-.15.09a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+            </button>
         </h1>
 
         <!-- Configuration and Status Panel -->
-        <div class="flex flex-col sm:flex-row items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 shadow-inner">
+        <div class="flex flex-col sm:flex-row items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 shadow-inner transition-colors duration-300">
             <div class="flex items-center space-x-3 mb-4 sm:mb-0">
-                <label for="thresholdInput" class="text-lg font-semibold text-gray-700 whitespace-nowrap">Target Persons:</label>
+                <label for="thresholdInput" id="targetLabel" class="text-lg font-semibold text-gray-700 whitespace-nowrap">Target Persons:</label>
                 <input type="number" id="thresholdInput" value="10" min="1"
-                       class="w-20 p-2 border-2 border-indigo-300 rounded-lg text-lg text-center font-mono focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                       class="w-20 p-2 border-2 border-indigo-300 rounded-lg text-lg text-center font-mono focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 focus:outline-none">
             </div>
 
             <div class="text-center">
-                <div id="statusMessage" class="font-bold text-lg text-gray-800">
+                <div id="statusMessage" class="font-bold text-lg text-gray-800 transition-colors duration-300">
                     Loading Model...
                 </div>
                 <div id="personCountText" class="font-bold text-3xl transition-colors duration-300 mt-1">0</div>
@@ -44,7 +89,7 @@
                     class="absolute top-0 left-0 transform scale-x-[-1]"></canvas>
             <div id="loadingOverlay"
                  class="absolute inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center transition-opacity duration-500">
-                <p class="text-white text-xl font-medium flex items-center space-x-3">
+                <p id="loadingText" class="text-white text-xl font-medium flex items-center space-x-3">
                     <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -55,14 +100,65 @@
         </div>
 
         <!-- Error Message Box -->
-        <div id="errorBox" class="hidden p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg" role="alert">
-            <span class="font-bold">Error:</span> <span id="errorMessage"></span>
+        <div id="errorBox" class="hidden p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg transition-colors duration-300" role="alert">
+            <span class="font-bold" id="errorPrefix">Error:</span> <span id="errorMessage"></span>
         </div>
 
-        <p class="text-xs text-gray-500 text-center pt-2">
+        <p id="footerNote" class="text-xs text-gray-500 text-center pt-2 transition-colors duration-300">
             *This uses client-side machine learning (TensorFlow.js) to run detection locally on your device.
         </p>
     </div>
+
+    <!-- START: Settings Modal (hidden by default) -->
+    <div id="settingsModal" class="modal-overlay hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-11/12 max-w-md space-y-5 transition-colors duration-300 transform scale-95">
+            <div class="flex justify-between items-center border-b pb-3 mb-3">
+                <h2 id="settingsTitle" class="text-2xl font-bold text-gray-900 dark:text-white">Settings</h2>
+                <button id="closeModalBtn" class="text-gray-500 hover:text-red-500 transition duration-150 focus:outline-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- Theme Setting -->
+            <div>
+                <label id="themeLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Theme</label>
+                <div class="flex items-center justify-between p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                    <span id="currentThemeText" class="font-semibold text-gray-800 dark:text-white">Bright</span>
+                    <button id="themeToggleBtn" class="px-4 py-2 text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none transition duration-150">
+                        Switch to Dark
+                    </button>
+                </div>
+            </div>
+
+            <!-- Camera Input Setting -->
+            <div>
+                <label for="cameraSelect" id="cameraLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Input Camera</label>
+                <select id="cameraSelect" 
+                        class="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 focus:outline-none">
+                    <option value="" disabled>Loading cameras...</option>
+                </select>
+                <p id="cameraLoadingStatus" class="mt-2 text-sm text-gray-500 dark:text-gray-400">Please allow camera access to load devices.</p>
+            </div>
+            
+            <!-- Language Setting -->
+            <div>
+                <label for="languageSelect" id="languageLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Language</label>
+                <select id="languageSelect"
+                        class="w-full p-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 focus:outline-none">
+                    <option value="en">English</option>
+                    <option value="he">Hebrew (עברית)</option>
+                    <option value="fr">French (Français)</option>
+                    <option value="de">German (Deutsch)</option>
+                    <option value="es">Spanish (Español)</option>
+                    <option value="it">Italian (Italiano)</option>
+                    <option value="ru">Russian (Русский)</option>
+                    <option value="yi">Yiddish (ייִדיש)</option>
+                </select>
+                <p id="languageHelp" class="mt-2 text-sm text-gray-500 dark:text-gray-400">All UI text will be updated on change.</p>
+            </div>
+        </div>
+    </div>
+    <!-- END: Settings Modal -->
 
     <!-- START: Dependencies moved here to ensure they are loaded before the main script execution -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
@@ -72,9 +168,238 @@
     <script>
         // Use global variables for Firebase context. These are automatically provided by the environment.
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const DEFAULT_LANG = 'en';
 
-        // --- Core Application Logic ---
+        // --- Translation Map ---
+        const translations = {
+            'en': {
+                'appTitle': 'Real-Time Person Counter',
+                'mainHeading': 'Live Person Monitoring',
+                'targetLabel': 'Target Persons:',
+                'loadingText': 'Initializing Detection Engine...',
+                'statusLoading': 'Loading AI Model...',
+                'statusModelLoaded': 'Model Loaded. Starting Camera...',
+                'statusTargetMet': 'TARGET MET ({{threshold}} or more)',
+                'statusBelowTarget': 'BELOW TARGET of {{threshold}}',
+                'footerNote': '*This uses client-side machine learning (TensorFlow.js) to run detection locally on your device.',
+                'errorPrefix': 'Error:',
+                'settingsTitle': 'Settings',
+                'themeLabel': 'Theme',
+                'cameraLabel': 'Input Camera',
+                'languageLabel': 'Language',
+                'switchDark': 'Switch to Dark',
+                'switchBright': 'Switch to Bright',
+                'currentBright': 'Bright',
+                'currentDark': 'Dark',
+                'langHelp': 'All UI text will be updated on change.',
+                'cameraLoading': 'Detecting cameras...',
+                'cameraNotFound': 'No video input devices found.',
+                'cameraSelectDefault': 'No cameras available',
+                'cameraAccessDenied': 'Camera access denied. Cannot load devices.',
+                'errorCritical': 'A critical error occurred during initialization. Check console for details.',
+                'errorCameraStart': 'Failed to start camera. Please check permissions or select another device.',
+                'errorCameraAccess': 'Camera access required to load device list.',
+            },
+            'he': { // Hebrew - RTL
+                'appTitle': 'מונה אנשים בזמן אמת',
+                'mainHeading': 'ניטור אנשים חי',
+                'targetLabel': 'אנשי יעד:',
+                'loadingText': 'מפעיל מנוע זיהוי...',
+                'statusLoading': 'טוען מודל בינה מלאכותית...',
+                'statusModelLoaded': 'המודל נטען. מפעיל מצלמה...',
+                'statusTargetMet': 'היעד הושג ({{threshold}} או יותר)',
+                'statusBelowTarget': 'מתחת ליעד של {{threshold}}',
+                'footerNote': '*זה משתמש בלמידת מכונה בצד הלקוח (TensorFlow.js) כדי להריץ זיהוי מקומי.',
+                'errorPrefix': 'שגיאה:',
+                'settingsTitle': 'הגדרות',
+                'themeLabel': 'ערכת נושא',
+                'cameraLabel': 'מצלמת קלט',
+                'languageLabel': 'שפה',
+                'switchDark': 'עבור לכהה',
+                'switchBright': 'עבור לבהיר',
+                'currentBright': 'בהיר',
+                'currentDark': 'כהה',
+                'langHelp': 'כל טקסט ממשק המשתמש יעודכן בשינוי.',
+                'cameraLoading': 'מזהה מצלמות...',
+                'cameraNotFound': 'לא נמצאו התקני קלט וידאו.',
+                'cameraSelectDefault': 'אין מצלמות זמינות',
+                'cameraAccessDenied': 'הגישה למצלמה נדחתה. לא ניתן לטעון התקנים.',
+                'errorCritical': 'אירעה שגיאה קריטית באתחול. בדוק את המסוף לפרטים.',
+                'errorCameraStart': 'הפעלת המצלמה נכשלה. אנא בדוק הרשאות או בחר התקן אחר.',
+                'errorCameraAccess': 'גישה למצלמה נדרשת כדי לטעון את רשימת ההתקנים.',
+            },
+            'fr': {
+                'appTitle': 'Compteur de Personnes en Temps Réel',
+                'mainHeading': 'Surveillance de Personnes en Direct',
+                'targetLabel': 'Personnes Cibles :',
+                'loadingText': 'Initialisation du moteur de détection...',
+                'statusLoading': 'Chargement du modèle d\'IA...',
+                'statusModelLoaded': 'Modèle Chargé. Démarrage de la Caméra...',
+                'statusTargetMet': 'OBJECTIF ATTEINT ({{threshold}} ou plus)',
+                'statusBelowTarget': 'EN DESSOUS DE L\'OBJECTIF de {{threshold}}',
+                'footerNote': '*Ceci utilise l\'apprentissage automatique côté client (TensorFlow.js) pour exécuter la détection localement sur votre appareil.',
+                'errorPrefix': 'Erreur :',
+                'settingsTitle': 'Paramètres',
+                'themeLabel': 'Thème',
+                'cameraLabel': 'Caméra d\'entrée',
+                'languageLabel': 'Langue',
+                'switchDark': 'Passer au foncé',
+                'switchBright': 'Passer à la lumière',
+                'currentBright': 'Clair',
+                'currentDark': 'Foncé',
+                'langHelp': 'Tout le texte de l\'interface utilisateur sera mis à jour.',
+                'cameraLoading': 'Détection des caméras...',
+                'cameraNotFound': 'Aucun périphérique d\'entrée vidéo trouvé.',
+                'cameraSelectDefault': 'Aucune caméra disponible',
+                'cameraAccessDenied': 'Accès à la caméra refusé. Impossible de charger les appareils.',
+                'errorCritical': 'Une erreur critique s\'est produite lors de l\'initialisation. Vérifiez la console pour les détails.',
+                'errorCameraStart': 'Échec du démarrage de la caméra. Veuillez vérifier les autorisations ou sélectionner un autre appareil.',
+                'errorCameraAccess': 'L\'accès à la caméra est requis pour charger la liste des appareils.',
+            },
+            'de': {
+                'appTitle': 'Echtzeit-Personenzähler',
+                'mainHeading': 'Live-Personenüberwachung',
+                'targetLabel': 'Zielpersonen:',
+                'loadingText': 'Erkennungsmotor wird initialisiert...',
+                'statusLoading': 'Lade KI-Modell...',
+                'statusModelLoaded': 'Modell geladen. Starte Kamera...',
+                'statusTargetMet': 'ZIEL ERREICHT ({{threshold}} oder mehr)',
+                'statusBelowTarget': 'UNTER DEM ZIEL von {{threshold}}',
+                'footerNote': '*Dies verwendet clientseitiges maschinelles Lernen (TensorFlow.js), um die Erkennung lokal auf Ihrem Gerät auszuführen.',
+                'errorPrefix': 'Fehler:',
+                'settingsTitle': 'Einstellungen',
+                'themeLabel': 'Thema',
+                'cameraLabel': 'Eingangskamera',
+                'languageLabel': 'Sprache',
+                'switchDark': 'Zu Dunkel wechseln',
+                'switchBright': 'Zu Hell wechseln',
+                'currentBright': 'Hell',
+                'currentDark': 'Dunkel',
+                'langHelp': 'Der gesamte UI-Text wird bei Änderung aktualisiert.',
+                'cameraLoading': 'Kameras werden erkannt...',
+                'cameraNotFound': 'Keine Videoeingabegeräte gefunden.',
+                'cameraSelectDefault': 'Keine Kameras verfügbar',
+                'cameraAccessDenied': 'Kamerazugriff verweigert. Geräte können nicht geladen werden.',
+                'errorCritical': 'Während der Initialisierung ist ein kritischer Fehler aufgetreten. Überprüfen Sie die Konsole auf Details.',
+                'errorCameraStart': 'Kamerastart fehlgeschlagen. Bitte überprüfen Sie die Berechtigungen oder wählen Sie ein anderes Gerät.',
+                'errorCameraAccess': 'Kamerazugriff erforderlich, um die Geräteliste zu laden.',
+            },
+            'es': {
+                'appTitle': 'Contador de Personas en Tiempo Real',
+                'mainHeading': 'Monitoreo de Personas en Vivo',
+                'targetLabel': 'Personas Objetivo:',
+                'loadingText': 'Inicializando motor de detección...',
+                'statusLoading': 'Cargando modelo de IA...',
+                'statusModelLoaded': 'Modelo Cargado. Iniciando Cámara...',
+                'statusTargetMet': 'OBJETIVO CUMPLIDO ({{threshold}} o más)',
+                'statusBelowTarget': 'DEBAJO DEL OBJETIVO de {{threshold}}',
+                'footerNote': '*Esto utiliza aprendizaje automático del lado del cliente (TensorFlow.js) para ejecutar la detección localmente en su dispositivo.',
+                'errorPrefix': 'Error:',
+                'settingsTitle': 'Configuración',
+                'themeLabel': 'Tema',
+                'cameraLabel': 'Cámara de entrada',
+                'languageLabel': 'Idioma',
+                'switchDark': 'Cambiar a Oscuro',
+                'switchBright': 'Cambiar a Brillante',
+                'currentBright': 'Brillante',
+                'currentDark': 'Oscuro',
+                'langHelp': 'Todo el texto de la interfaz de usuario se actualizará.',
+                'cameraLoading': 'Detectando cámaras...',
+                'cameraNotFound': 'No se encontraron dispositivos de entrada de video.',
+                'cameraSelectDefault': 'No hay cámaras disponibles',
+                'cameraAccessDenied': 'Acceso a la cámara denegado. No se pueden cargar dispositivos.',
+                'errorCritical': 'Ocurrió un error crítico durante la inicialización. Verifique la consola para obtener detalles.',
+                'errorCameraStart': 'No se pudo iniciar la cámara. Verifique los permisos o seleccione otro dispositivo.',
+                'errorCameraAccess': 'Se requiere acceso a la cámara para cargar la lista de dispositivos.',
+            },
+            'it': {
+                'appTitle': 'Contatore di Persone in Tempo Reale',
+                'mainHeading': 'Monitoraggio Persone in Tempo Reale',
+                'targetLabel': 'Persone Obiettivo:',
+                'loadingText': 'Inizializzazione motore di rilevamento...',
+                'statusLoading': 'Caricamento modello AI...',
+                'statusModelLoaded': 'Modello Caricato. Avvio Telecamera...',
+                'statusTargetMet': 'OBIETTIVO RAGGIUNTO ({{threshold}} o più)',
+                'statusBelowTarget': 'SOTTO L\'OBIETTIVO di {{threshold}}',
+                'footerNote': '*Questo utilizza l\'apprendimento automatico lato client (TensorFlow.js) per eseguire il rilevamento localmente sul tuo dispositivo.',
+                'errorPrefix': 'Errore:',
+                'settingsTitle': 'Impostazioni',
+                'themeLabel': 'Tema',
+                'cameraLabel': 'Telecamera di ingresso',
+                'languageLabel': 'Lingua',
+                'switchDark': 'Passa a Scura',
+                'switchBright': 'Passa a Chiara',
+                'currentBright': 'Chiaro',
+                'currentDark': 'Scuro',
+                'langHelp': 'Tutto il testo dell\'interfaccia utente verrà aggiornato.',
+                'cameraLoading': 'Rilevamento telecamere...',
+                'cameraNotFound': 'Nessun dispositivo di input video trovato.',
+                'cameraSelectDefault': 'Nessuna telecamera disponibile',
+                'cameraAccessDenied': 'Accesso alla telecamera negato. Impossibile caricare i dispositivi.',
+                'errorCritical': 'Si è verificato un errore critico durante l\'inizializzazione. Controlla la console per i dettagli.',
+                'errorCameraStart': 'Impossibile avviare la telecamera. Controlla le autorizzazioni o seleziona un altro dispositivo.',
+                'errorCameraAccess': 'Accesso alla telecamera richiesto per caricare l\'elenco dei dispositivi.',
+            },
+            'ru': {
+                'appTitle': 'Счетчик людей в реальном времени',
+                'mainHeading': 'Мониторинг людей в реальном времени',
+                'targetLabel': 'Целевое количество:',
+                'loadingText': 'Инициализация системы обнаружения...',
+                'statusLoading': 'Загрузка модели ИИ...',
+                'statusModelLoaded': 'Модель Загружена. Запуск Камеры...',
+                'statusTargetMet': 'ЦЕЛЬ ДОСТИГНУТА ({{threshold}} или более)',
+                'statusBelowTarget': 'НИЖЕ ЦЕЛИ: {{threshold}}',
+                'footerNote': '*Используется клиентское машинное обучение (TensorFlow.js) для локального обнаружения на вашем устройстве.',
+                'errorPrefix': 'Ошибка:',
+                'settingsTitle': 'Настройки',
+                'themeLabel': 'Тема',
+                'cameraLabel': 'Входная камера',
+                'languageLabel': 'Язык',
+                'switchDark': 'Переключить на темный',
+                'switchBright': 'Переключить на светлый',
+                'currentBright': 'Светлая',
+                'currentDark': 'Темная',
+                'langHelp': 'Весь текст интерфейса будет обновлен.',
+                'cameraLoading': 'Обнаружение камер...',
+                'cameraNotFound': 'Видеовходы не найдены.',
+                'cameraSelectDefault': 'Камеры недоступны',
+                'cameraAccessDenied': 'Доступ к камере запрещен. Невозможно загрузить устройства.',
+                'errorCritical': 'Произошла критическая ошибка при инициализации. Проверьте консоль.',
+                'errorCameraStart': 'Не удалось запустить камеру. Проверьте разрешения или выберите другое устройство.',
+                'errorCameraAccess': 'Требуется доступ к камере для загрузки списка устройств.',
+            },
+            'yi': { // Yiddish - RTL
+                'appTitle': 'ציילער פון מענטשן אין רעאל צייט',
+                'mainHeading': 'לעבן מענטשן מאָניטאָרינג',
+                'targetLabel': 'ציל מענטשן:',
+                'loadingText': 'איניציאליזירן די דעטעקשאַן מאָטאָר...',
+                'statusLoading': 'לאָדן די אַי מאָדעל...',
+                'statusModelLoaded': 'מאָדעל געלאָדן. אָנהייב קאַמעראַ...',
+                'statusTargetMet': 'ציל דערגרייכט ({{threshold}} אָדער מער)',
+                'statusBelowTarget': 'אונטער דעם ציל פון {{threshold}}',
+                'footerNote': '*דאָס נוצט קליענט-זייטיקע מאַשין לערנען (TensorFlow.js) צו פירן לאָקאַלע דעטעקשאַן אויף דיין מיטל.',
+                'errorPrefix': 'טעות:',
+                'settingsTitle': 'סעטטינגס',
+                'themeLabel': 'טעמע',
+                'cameraLabel': 'אַרייַנשרייַב קאַמעראַ',
+                'languageLabel': 'שפּראַך',
+                'switchDark': 'באַשטימען צו דאַרק',
+                'switchBright': 'באַשטימען צו העל',
+                'currentBright': 'העל',
+                'currentDark': 'דאַרק',
+                'langHelp': 'אַלע UI טעקסט וועט זיין דערהייַנטיקט אויף ענדערונג.',
+                'cameraLoading': 'דעטעקטירן קאַמעראַס...',
+                'cameraNotFound': 'קיין ווידעאָ אַרייַנשרייַב דעוויסעס געפונען.',
+                'cameraSelectDefault': 'קיין קאַמעראַס בנימצא',
+                'cameraAccessDenied': 'קאַמעראַ צוטריט פֿאַרלייקנט. קען נישט לאָדן דעוויסעס.',
+                'errorCritical': 'אַ קריטיש טעות איז פארגעקומען בעת איניציאליזאַציע. קוק קאָנסאָל פֿאַר פרטים.',
+                'errorCameraStart': 'ניט אַנדערש צו אָנהייבן קאַמעראַ. ביטע קאָנטראָלירן פּערמישאַנז אָדער סעלעקטירן אַן אַנדער מיטל.',
+                'errorCameraAccess': 'קאַמעראַ צוטריט איז פארלאנגט צו לאָדן די דעוויס רשימה.',
+            }
+        };
 
+
+        // --- Core Application Elements ---
         const video = document.getElementById('webcamVideo');
         const canvas = document.getElementById('detectionCanvas');
         const ctx = canvas.getContext('2d');
@@ -85,110 +410,279 @@
         const errorBox = document.getElementById('errorBox');
         const errorMessage = document.getElementById('errorMessage');
 
+        // --- Localized Elements ---
+        const mainHeading = document.getElementById('mainHeading');
+        const targetLabel = document.getElementById('targetLabel');
+        const loadingText = document.getElementById('loadingText');
+        const footerNote = document.getElementById('footerNote');
+        const errorPrefix = document.getElementById('errorPrefix');
+        
+        // --- Settings Elements ---
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        const currentThemeText = document.getElementById('currentThemeText');
+        const cameraSelect = document.getElementById('cameraSelect');
+        const cameraLoadingStatus = document.getElementById('cameraLoadingStatus');
+        const languageSelect = document.getElementById('languageSelect');
+        const settingsTitle = document.getElementById('settingsTitle');
+        const themeLabel = document.getElementById('themeLabel');
+        const cameraLabel = document.getElementById('cameraLabel');
+        const languageLabel = document.getElementById('languageLabel');
+        const languageHelp = document.getElementById('languageHelp');
+
+
+        // --- State Management ---
         let model = null;
         let isModelLoaded = false;
-        let detectionInterval = null;
+        let currentStream = null;
+        let allCameras = [];
+        let currentDeviceId = null;
+        let currentLang = DEFAULT_LANG;
+
+
+        // --- Localization Functions ---
 
         /**
-         * Initializes the camera, model, and starts the detection loop.
+         * Sets the language of the application UI.
+         * @param {string} langCode - The language code (e.g., 'en', 'he').
+         */
+        function setLanguage(langCode) {
+            const langData = translations[langCode] || translations[DEFAULT_LANG];
+            currentLang = langCode;
+
+            // 1. Update Document Metadata
+            document.title = langData.appTitle;
+            document.body.lang = langCode;
+            localStorage.setItem('language', langCode);
+            
+            // 2. Handle RTL (Right-to-Left)
+            if (langCode === 'he' || langCode === 'yi') {
+                document.body.dir = 'rtl';
+            } else {
+                document.body.dir = 'ltr';
+            }
+            
+            // 3. Update Main UI Elements
+            mainHeading.childNodes[0].nodeValue = langData.mainHeading + ' '; // NodeValue is the text node
+            targetLabel.textContent = langData.targetLabel;
+            loadingText.childNodes[2].nodeValue = langData.loadingText; // The text node after the SVG
+            footerNote.textContent = langData.footerNote;
+            errorPrefix.textContent = langData.errorPrefix;
+            
+            // Re-run status update to translate status messages if running
+            if (isModelLoaded) {
+                updateStatus(parseInt(personCountText.textContent) || 0);
+            } else {
+                 statusMessage.textContent = langData.statusLoading;
+            }
+
+            // 4. Update Settings Modal Elements
+            settingsTitle.textContent = langData.settingsTitle;
+            themeLabel.textContent = langData.themeLabel;
+            cameraLabel.textContent = langData.cameraLabel;
+            languageLabel.textContent = langData.languageLabel;
+            languageHelp.textContent = langData.langHelp;
+            
+            // Update camera status message
+            if (allCameras.length === 0) {
+                 cameraLoadingStatus.textContent = langData.cameraAccessDenied;
+            } else {
+                cameraLoadingStatus.textContent = langData.cameraLoading;
+                loadCameraDevices(); // Re-run to update status text if necessary
+            }
+            
+            // Re-apply theme text for translation
+            applyInitialTheme();
+        }
+
+        /**
+         * Loads the AI model and all camera devices.
          */
         async function init() {
+            const initialLang = localStorage.getItem('language') || DEFAULT_LANG;
+            setLanguage(initialLang);
+            languageSelect.value = initialLang;
+
             try {
                 // 1. Load the COCO-SSD Model
-                statusMessage.textContent = "Loading AI Model...";
-                // This line now runs after the cocoSsd script is guaranteed to be loaded
+                statusMessage.textContent = translations[currentLang].statusLoading;
                 model = await cocoSsd.load();
                 isModelLoaded = true;
-                statusMessage.textContent = "Model Loaded. Starting Camera...";
+                statusMessage.textContent = translations[currentLang].statusModelLoaded;
 
-                // 2. Start the Camera Stream
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "user" } // Try to use the front camera first (good for mobile)
-                });
-                video.srcObject = stream;
+                // 2. Load Camera Devices and set up listener
+                await loadCameraDevices();
+                cameraSelect.addEventListener('change', (e) => startCamera(e.target.value));
 
-                // 3. Wait for video to load metadata
-                video.onloadeddata = () => {
-                    // Set canvas and video dimensions
-                    const displayWidth = video.videoWidth;
-                    const displayHeight = video.videoHeight;
-
-                    // Adjust video/canvas size for responsive display
-                    const containerWidth = video.parentElement.offsetWidth;
-                    const aspectRatio = displayWidth / displayHeight;
-
-                    video.width = containerWidth;
-                    video.height = containerWidth / aspectRatio;
-                    canvas.width = displayWidth; // Use intrinsic video resolution for detection
-                    canvas.height = displayHeight;
-
-                    // Hide loading overlay and start detection
-                    loadingOverlay.classList.add('opacity-0');
-                    setTimeout(() => loadingOverlay.classList.add('hidden'), 500); // Hide after transition
-
-                    // Start the detection loop
-                    detectFrame();
-                };
+                // 3. Start the Camera Stream (uses default device)
+                await startCamera(currentDeviceId);
 
             } catch (err) {
                 console.error("Initialization failed:", err);
-                statusMessage.textContent = "ERROR";
-                loadingOverlay.classList.add('hidden');
-                errorBox.classList.remove('hidden');
-                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                    errorMessage.textContent = "Camera access denied. Please allow camera access to run the counter.";
-                } else if (err.name === 'NotFoundError') {
-                    errorMessage.textContent = "No suitable camera found on this device.";
-                } else {
-                    errorMessage.textContent = `A critical error occurred: ${err.message}`;
-                }
+                showError(translations[currentLang].errorCritical);
             }
         }
 
         /**
+         * Enumerates all video input devices and populates the camera selector dropdown.
+         */
+        async function loadCameraDevices() {
+            cameraSelect.innerHTML = '';
+            cameraLoadingStatus.textContent = translations[currentLang].cameraLoading;
+
+            try {
+                // Request camera permission first to ensure devices are listed
+                await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); 
+                
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                allCameras = devices.filter(device => device.kind === 'videoinput');
+                
+                if (allCameras.length === 0) {
+                    cameraLoadingStatus.textContent = translations[currentLang].cameraNotFound;
+                    cameraSelect.innerHTML = `<option value="" disabled selected>${translations[currentLang].cameraSelectDefault}</option>`;
+                    return;
+                }
+
+                allCameras.forEach((device, index) => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    // Use device label if available, otherwise a generic translated name
+                    option.textContent = device.label || `${translations[currentLang].cameraLabel} ${index + 1}`;
+                    cameraSelect.appendChild(option);
+                });
+
+                // Set the default selection to the first camera
+                currentDeviceId = allCameras[0].deviceId;
+                cameraSelect.value = currentDeviceId;
+                cameraLoadingStatus.textContent = translations[currentLang].cameraLabel + ` (${allCameras.length} found)`; // Keep count in English for simplicity
+            
+            } catch (err) {
+                console.error("Error loading camera devices:", err);
+                cameraLoadingStatus.textContent = translations[currentLang].cameraAccessDenied;
+                showError(translations[currentLang].errorCameraAccess);
+            }
+        }
+        
+        /**
+         * Stops the current stream and starts a new one with the given deviceId.
+         * @param {string | null} deviceId - The ID of the camera device to use.
+         */
+        async function startCamera(deviceId) {
+            // Stop existing stream
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+
+            // Set loading state
+            loadingOverlay.classList.remove('hidden', 'opacity-0');
+
+            const constraints = {
+                video: {
+                    deviceId: deviceId ? { exact: deviceId } : undefined
+                }
+            };
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                currentStream = stream;
+                video.srcObject = stream;
+                currentDeviceId = deviceId; // Update state
+
+                video.onloadeddata = () => {
+                    // Set canvas and video dimensions for responsiveness
+                    const displayWidth = video.videoWidth;
+                    const displayHeight = video.videoHeight;
+                    const containerWidth = video.parentElement.offsetWidth;
+                    const aspectRatio = displayWidth / displayHeight;
+
+                    // Set the visible video element size
+                    video.style.width = '100%';
+                    video.style.height = `${containerWidth / aspectRatio}px`;
+
+                    // Set the actual canvas resolution (used for detection)
+                    canvas.width = displayWidth;
+                    canvas.height = displayHeight;
+                    
+                    // Hide loading overlay and ensure detection is running
+                    loadingOverlay.classList.add('opacity-0');
+                    setTimeout(() => loadingOverlay.classList.add('hidden'), 500); 
+
+                    // Only start the detection loop if it hasn't started yet
+                    if (isModelLoaded) {
+                        detectFrame();
+                    }
+                };
+
+            } catch (err) {
+                console.error("Error starting camera stream:", err);
+                showError(translations[currentLang].errorCameraStart);
+                loadingOverlay.classList.add('hidden'); // Hide loading overlay on error
+            }
+        }
+
+
+        /**
          * The main detection loop using requestAnimationFrame for smooth drawing.
          */
-        async function detectFrame() {
+        function detectFrame() {
             if (!isModelLoaded || video.paused || video.ended) {
                 requestAnimationFrame(detectFrame);
                 return;
             }
 
-            // Detect objects in the current video frame
-            const predictions = await model.detect(video);
+            model.detect(video).then(predictions => {
+                // Filter for only 'person' objects and count them
+                const personPredictions = predictions.filter(p => p.class === 'person');
+                const personCount = personPredictions.length;
 
-            // Filter for only 'person' objects and count them
-            const personPredictions = predictions.filter(p => p.class === 'person');
-            const personCount = personPredictions.length;
+                // Update UI and color
+                updateStatus(personCount);
 
-            // Update UI and color
-            updateStatus(personCount);
+                // Draw bounding boxes on the canvas
+                drawDetections(personPredictions);
 
-            // Draw bounding boxes on the canvas
-            drawDetections(personPredictions);
-
-            // Loop the detection
-            requestAnimationFrame(detectFrame);
+                // Loop the detection
+                requestAnimationFrame(detectFrame);
+            }).catch(e => {
+                console.error("Detection failed:", e);
+                requestAnimationFrame(detectFrame);
+            });
         }
+        
+        /**
+         * Displays a non-intrusive error message.
+         * @param {string} message 
+         */
+        function showError(message) {
+            errorBox.classList.remove('hidden');
+            errorMessage.textContent = message;
+            setTimeout(() => errorBox.classList.add('hidden'), 8000); // Hide after 8 seconds
+        }
+
+        // --- UI & Settings Functions ---
 
         /**
          * Updates the count text color and status message based on the threshold.
          * @param {number} count - The current number of people detected.
          */
         function updateStatus(count) {
-            const threshold = parseInt(thresholdInput.value) || 1; // Default to 1 if empty or invalid
+            const threshold = parseInt(thresholdInput.value) || 1; 
             personCountText.textContent = count;
+            const langData = translations[currentLang];
 
             // Apply RED/GREEN coloring logic
             if (count < threshold) {
                 // Below threshold: Red
                 personCountText.className = 'font-bold text-red-500 text-3xl transition-colors duration-300 mt-1';
-                statusMessage.textContent = `BELOW TARGET of ${threshold}`;
+                statusMessage.textContent = langData.statusBelowTarget.replace('{{threshold}}', threshold);
                 statusMessage.className = 'font-bold text-lg text-red-500';
             } else {
                 // At or above threshold: Green
                 personCountText.className = 'font-bold text-green-600 text-3xl transition-colors duration-300 mt-1';
-                statusMessage.textContent = `TARGET MET (${threshold} or more)`;
+                statusMessage.textContent = langData.statusTargetMet.replace('{{threshold}}', threshold);
                 statusMessage.className = 'font-bold text-lg text-green-600';
             }
         }
@@ -224,9 +718,86 @@
                 ctx.fillText(text, x + 5, y + textHeight);
             });
         }
+        
+        /**
+         * Toggles the application between light and dark theme.
+         */
+        function toggleTheme() {
+            const isDarkMode = document.body.classList.toggle('dark');
+            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+
+            const langData = translations[currentLang];
+
+            if (isDarkMode) {
+                currentThemeText.textContent = langData.currentDark;
+                themeToggleBtn.textContent = langData.switchBright;
+                themeToggleBtn.classList.replace('bg-indigo-600', 'bg-yellow-600');
+                themeToggleBtn.classList.replace('hover:bg-indigo-700', 'hover:bg-yellow-700');
+            } else {
+                currentThemeText.textContent = langData.currentBright;
+                themeToggleBtn.textContent = langData.switchDark;
+                themeToggleBtn.classList.replace('bg-yellow-600', 'bg-indigo-600');
+                themeToggleBtn.classList.replace('hover:bg-yellow-700', 'hover:bg-indigo-700');
+            }
+        }
+        
+        /**
+         * Applies the theme saved in localStorage or defaults to light.
+         */
+        function applyInitialTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            const langData = translations[currentLang];
+
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark');
+                currentThemeText.textContent = langData.currentDark;
+                themeToggleBtn.textContent = langData.switchBright;
+                themeToggleBtn.classList.replace('bg-indigo-600', 'bg-yellow-600');
+                themeToggleBtn.classList.replace('hover:bg-indigo-700', 'hover:bg-yellow-700');
+            } else {
+                 document.body.classList.remove('dark');
+                currentThemeText.textContent = langData.currentBright;
+                themeToggleBtn.textContent = langData.switchDark;
+                themeToggleBtn.classList.replace('bg-yellow-600', 'bg-indigo-600');
+                themeToggleBtn.classList.replace('hover:bg-yellow-700', 'hover:bg-indigo-700');
+            }
+        }
+
+        /**
+         * Setup event listeners for the settings modal.
+         */
+        function setupSettingsListeners() {
+            settingsBtn.addEventListener('click', () => {
+                settingsModal.classList.remove('hidden');
+                setTimeout(() => settingsModal.classList.remove('opacity-0'), 10);
+            });
+
+            const hideModal = () => {
+                settingsModal.classList.add('opacity-0');
+                setTimeout(() => settingsModal.classList.add('hidden'), 300);
+            };
+
+            closeModalBtn.addEventListener('click', hideModal);
+            // Hide modal if user clicks outside the modal content
+            settingsModal.addEventListener('click', (e) => {
+                if (e.target === settingsModal) {
+                    hideModal();
+                }
+            });
+
+            themeToggleBtn.addEventListener('click', toggleTheme);
+            
+            // Language selection is now functional
+            languageSelect.addEventListener('change', (e) => {
+                setLanguage(e.target.value);
+            });
+        }
 
         // Start the application when the window loads
-        window.onload = init;
+        window.onload = () => {
+            setupSettingsListeners();
+            init();
+        };
     </script>
 </body>
 </html>
