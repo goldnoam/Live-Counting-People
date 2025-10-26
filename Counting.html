@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Person Counter</title>
+    <!-- Load Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Inter Font -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+    <!-- Removed: TensorFlow.js and Coco-SSD scripts were moved to the end of the body -->
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
+
+    <div id="app-container" class="w-full max-w-2xl bg-white shadow-2xl rounded-xl p-6 space-y-6">
+
+        <h1 class="text-3xl font-extrabold text-gray-900 text-center border-b pb-3 mb-4">
+            Live Person Monitoring
+        </h1>
+
+        <!-- Configuration and Status Panel -->
+        <div class="flex flex-col sm:flex-row items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 shadow-inner">
+            <div class="flex items-center space-x-3 mb-4 sm:mb-0">
+                <label for="thresholdInput" class="text-lg font-semibold text-gray-700 whitespace-nowrap">Target Persons:</label>
+                <input type="number" id="thresholdInput" value="10" min="1"
+                       class="w-20 p-2 border-2 border-indigo-300 rounded-lg text-lg text-center font-mono focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+            </div>
+
+            <div class="text-center">
+                <div id="statusMessage" class="font-bold text-lg text-gray-800">
+                    Loading Model...
+                </div>
+                <div id="personCountText" class="font-bold text-3xl transition-colors duration-300 mt-1">0</div>
+            </div>
+        </div>
+
+        <!-- Video and Canvas Container -->
+        <div class="relative rounded-xl overflow-hidden shadow-lg border-4 border-gray-300">
+            <video id="webcamVideo" autoplay muted playsinline
+                   class="w-full h-auto object-cover transform scale-x-[-1]"></video>
+            <canvas id="detectionCanvas"
+                    class="absolute top-0 left-0 transform scale-x-[-1]"></canvas>
+            <div id="loadingOverlay"
+                 class="absolute inset-0 bg-gray-900 bg-opacity-70 flex items-center justify-center transition-opacity duration-500">
+                <p class="text-white text-xl font-medium flex items-center space-x-3">
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Initializing Detection Engine...
+                </p>
+            </div>
+        </div>
+
+        <!-- Error Message Box -->
+        <div id="errorBox" class="hidden p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg" role="alert">
+            <span class="font-bold">Error:</span> <span id="errorMessage"></span>
+        </div>
+
+        <p class="text-xs text-gray-500 text-center pt-2">
+            *This uses client-side machine learning (TensorFlow.js) to run detection locally on your device.
+        </p>
+    </div>
+
+    <!-- START: Dependencies moved here to ensure they are loaded before the main script execution -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <!-- END: Dependencies moved here -->
+
+    <script>
+        // Use global variables for Firebase context. These are automatically provided by the environment.
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // --- Core Application Logic ---
+
+        const video = document.getElementById('webcamVideo');
+        const canvas = document.getElementById('detectionCanvas');
+        const ctx = canvas.getContext('2d');
+        const thresholdInput = document.getElementById('thresholdInput');
+        const personCountText = document.getElementById('personCountText');
+        const statusMessage = document.getElementById('statusMessage');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const errorBox = document.getElementById('errorBox');
+        const errorMessage = document.getElementById('errorMessage');
+
+        let model = null;
+        let isModelLoaded = false;
+        let detectionInterval = null;
+
+        /**
+         * Initializes the camera, model, and starts the detection loop.
+         */
+        async function init() {
+            try {
+                // 1. Load the COCO-SSD Model
+                statusMessage.textContent = "Loading AI Model...";
+                // This line now runs after the cocoSsd script is guaranteed to be loaded
+                model = await cocoSsd.load();
+                isModelLoaded = true;
+                statusMessage.textContent = "Model Loaded. Starting Camera...";
+
+                // 2. Start the Camera Stream
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "user" } // Try to use the front camera first (good for mobile)
+                });
+                video.srcObject = stream;
+
+                // 3. Wait for video to load metadata
+                video.onloadeddata = () => {
+                    // Set canvas and video dimensions
+                    const displayWidth = video.videoWidth;
+                    const displayHeight = video.videoHeight;
+
+                    // Adjust video/canvas size for responsive display
+                    const containerWidth = video.parentElement.offsetWidth;
+                    const aspectRatio = displayWidth / displayHeight;
+
+                    video.width = containerWidth;
+                    video.height = containerWidth / aspectRatio;
+                    canvas.width = displayWidth; // Use intrinsic video resolution for detection
+                    canvas.height = displayHeight;
+
+                    // Hide loading overlay and start detection
+                    loadingOverlay.classList.add('opacity-0');
+                    setTimeout(() => loadingOverlay.classList.add('hidden'), 500); // Hide after transition
+
+                    // Start the detection loop
+                    detectFrame();
+                };
+
+            } catch (err) {
+                console.error("Initialization failed:", err);
+                statusMessage.textContent = "ERROR";
+                loadingOverlay.classList.add('hidden');
+                errorBox.classList.remove('hidden');
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    errorMessage.textContent = "Camera access denied. Please allow camera access to run the counter.";
+                } else if (err.name === 'NotFoundError') {
+                    errorMessage.textContent = "No suitable camera found on this device.";
+                } else {
+                    errorMessage.textContent = `A critical error occurred: ${err.message}`;
+                }
+            }
+        }
+
+        /**
+         * The main detection loop using requestAnimationFrame for smooth drawing.
+         */
+        async function detectFrame() {
+            if (!isModelLoaded || video.paused || video.ended) {
+                requestAnimationFrame(detectFrame);
+                return;
+            }
+
+            // Detect objects in the current video frame
+            const predictions = await model.detect(video);
+
+            // Filter for only 'person' objects and count them
+            const personPredictions = predictions.filter(p => p.class === 'person');
+            const personCount = personPredictions.length;
+
+            // Update UI and color
+            updateStatus(personCount);
+
+            // Draw bounding boxes on the canvas
+            drawDetections(personPredictions);
+
+            // Loop the detection
+            requestAnimationFrame(detectFrame);
+        }
+
+        /**
+         * Updates the count text color and status message based on the threshold.
+         * @param {number} count - The current number of people detected.
+         */
+        function updateStatus(count) {
+            const threshold = parseInt(thresholdInput.value) || 1; // Default to 1 if empty or invalid
+            personCountText.textContent = count;
+
+            // Apply RED/GREEN coloring logic
+            if (count < threshold) {
+                // Below threshold: Red
+                personCountText.className = 'font-bold text-red-500 text-3xl transition-colors duration-300 mt-1';
+                statusMessage.textContent = `BELOW TARGET of ${threshold}`;
+                statusMessage.className = 'font-bold text-lg text-red-500';
+            } else {
+                // At or above threshold: Green
+                personCountText.className = 'font-bold text-green-600 text-3xl transition-colors duration-300 mt-1';
+                statusMessage.textContent = `TARGET MET (${threshold} or more)`;
+                statusMessage.className = 'font-bold text-lg text-green-600';
+            }
+        }
+
+        /**
+         * Draws the bounding boxes and labels on the canvas.
+         * @param {Array} predictions - Filtered predictions for people.
+         */
+        function drawDetections(predictions) {
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw each detection box
+            predictions.forEach(prediction => {
+                const [x, y, width, height] = prediction.bbox;
+
+                // 1. Draw Bounding Box (Green for people)
+                ctx.strokeStyle = '#10B981'; // Tailwind green-500
+                ctx.lineWidth = 4;
+                ctx.strokeRect(x, y, width, height);
+
+                // 2. Draw Label Background
+                ctx.fillStyle = '#10B981';
+                const text = `${prediction.class} (${Math.round(prediction.score * 100)}%)`;
+                ctx.font = '24px Inter, sans-serif';
+                const textWidth = ctx.measureText(text).width;
+                const textHeight = 24; // Approximation
+
+                ctx.fillRect(x, y, textWidth + 10, textHeight + 5);
+
+                // 3. Draw Label Text
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillText(text, x + 5, y + textHeight);
+            });
+        }
+
+        // Start the application when the window loads
+        window.onload = init;
+    </script>
+</body>
+</html>
